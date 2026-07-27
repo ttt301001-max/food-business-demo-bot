@@ -161,6 +161,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user = update.effective_user
 
+    if text.lower() in ("админ", "admin"):
+        await admin(update, context)
+        return
+
     if is_owner(user.id) and context.user_data.get("admin_mode"):
         await handle_admin_message(update, context)
         return
@@ -389,3 +393,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
