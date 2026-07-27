@@ -1,1 +1,410 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Fresh Market</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #f6f7f2;
+      --surface: #ffffff;
+      --text: #172018;
+      --muted: #6e776d;
+      --green: #237a46;
+      --green-dark: #15562f;
+      --line: #dfe5dc;
+      --soft: #eaf3e8;
+      --danger: #b34b38;
+    }
 
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding-bottom: 120px;
+    }
+
+    header {
+      padding: 18px 16px 14px;
+      background: var(--green-dark);
+      color: #fff;
+    }
+
+    .brand {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      opacity: .86;
+      line-height: 1.4;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .tab {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 9px 13px;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .tab.active {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      padding: 14px 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      min-height: 218px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .photo {
+      height: 96px;
+      display: grid;
+      place-items: center;
+      background: var(--soft);
+      font-size: 38px;
+    }
+
+    .body {
+      padding: 10px;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .name {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.25;
+      min-height: 36px;
+    }
+
+    .unit {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .price {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--green);
+      margin-top: auto;
+    }
+
+    .qty {
+      display: grid;
+      grid-template-columns: 34px 1fr 34px;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .qty button {
+      height: 34px;
+      border: none;
+      border-radius: 9px;
+      background: var(--green);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .qty span {
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .cart {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--line);
+      padding: 12px 16px 16px;
+      box-shadow: 0 -8px 28px rgba(0,0,0,.08);
+      z-index: 10;
+    }
+
+    .cart-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .total {
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .checkout {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      background: var(--green);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .checkout:disabled {
+      background: #a9b2a8;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.38);
+      display: none;
+      align-items: flex-end;
+      z-index: 20;
+    }
+
+    .modal.open { display: flex; }
+
+    .sheet {
+      width: 100%;
+      background: var(--surface);
+      border-radius: 18px 18px 0 0;
+      padding: 18px 16px 20px;
+    }
+
+    .sheet h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 13px;
+      margin-bottom: 10px;
+      font-size: 15px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .secondary, .primary {
+      border: none;
+      border-radius: 12px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .secondary {
+      background: var(--soft);
+      color: var(--green-dark);
+    }
+
+    .primary {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .error {
+      display: none;
+      color: var(--danger);
+      font-size: 13px;
+      margin: 0 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Fresh Market</div>
+    <div class="subtitle">Свежие продукты для дома и бизнеса. Выберите товары, укажите телефон и отправьте заказ.</div>
+  </header>
+
+  <div class="tabs" id="tabs"></div>
+  <main class="grid" id="grid"></main>
+
+  <section class="cart">
+    <div class="cart-row">
+      <span id="cartCount">Корзина пуста</span>
+      <span class="total" id="cartTotal">0 манат</span>
+    </div>
+    <button class="checkout" id="checkoutBtn" onclick="openCheckout()" disabled>Оформить заказ</button>
+  </section>
+
+  <div class="modal" id="modal">
+    <div class="sheet">
+      <h2>Ваши данные</h2>
+      <p class="error" id="error">Заполните имя и телефон.</p>
+      <input id="clientName" placeholder="Ваше имя" />
+      <input id="clientPhone" placeholder="Телефон" />
+      <div class="actions">
+        <button class="secondary" onclick="closeCheckout()">Назад</button>
+        <button class="primary" onclick="sendOrder()">Отправить</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram ? window.Telegram.WebApp : null;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+
+    const products = [
+      { id: 1, cat: "Овощи", icon: "🍅", name: "Помидоры", unit: "1 кг", price: 25 },
+      { id: 2, cat: "Овощи", icon: "🥒", name: "Огурцы", unit: "1 кг", price: 18 },
+      { id: 3, cat: "Фрукты", icon: "🍎", name: "Яблоки", unit: "1 кг", price: 20 },
+      { id: 4, cat: "Фрукты", icon: "🍌", name: "Бананы", unit: "1 кг", price: 28 },
+      { id: 5, cat: "Молочка", icon: "🥛", name: "Молоко", unit: "1 бутылка", price: 15 },
+      { id: 6, cat: "Молочка", icon: "🧀", name: "Сыр домашний", unit: "1 кг", price: 45 },
+      { id: 7, cat: "Бакалея", icon: "🍚", name: "Рис", unit: "1 кг", price: 22 },
+      { id: 8, cat: "Бакалея", icon: "🛢️", name: "Масло", unit: "1 шт", price: 35 }
+    ];
+
+    let activeCat = "Все";
+    const cart = {};
+
+    function categories() {
+      return ["Все", ...new Set(products.map(p => p.cat))];
+    }
+
+    function renderTabs() {
+      document.getElementById("tabs").innerHTML = categories().map(cat =>
+        `<button class="tab ${cat === activeCat ? "active" : ""}" onclick="setCat('${cat}')">${cat}</button>`
+      ).join("");
+    }
+
+    function setCat(cat) {
+      activeCat = cat;
+      renderTabs();
+      renderGrid();
+    }
+
+    function renderGrid() {
+      const list = activeCat === "Все" ? products : products.filter(p => p.cat === activeCat);
+      document.getElementById("grid").innerHTML = list.map(p => {
+        const qty = cart[p.id] || 0;
+        return `
+          <article class="card">
+            <div class="photo">${p.icon}</div>
+            <div class="body">
+              <div class="name">${p.name}</div>
+              <div class="unit">${p.unit}</div>
+              <div class="price">${p.price} манат</div>
+              <div class="qty">
+                <button onclick="changeQty(${p.id}, -1)">−</button>
+                <span>${qty}</span>
+                <button onclick="changeQty(${p.id}, 1)">+</button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+      renderCart();
+    }
+
+    function changeQty(id, delta) {
+      cart[id] = Math.max(0, (cart[id] || 0) + delta);
+      if (cart[id] === 0) delete cart[id];
+      renderGrid();
+    }
+
+    function getItems() {
+      return Object.entries(cart).map(([id, qty]) => {
+        const product = products.find(p => p.id === Number(id));
+        return { name: product.name, qty, price: product.price };
+      });
+    }
+
+    function getTotal() {
+      return getItems().reduce((sum, item) => sum + item.qty * item.price, 0);
+    }
+
+    function renderCart() {
+      const count = getItems().reduce((sum, item) => sum + item.qty, 0);
+      const total = getTotal();
+      document.getElementById("cartCount").textContent = count ? `Товаров: ${count}` : "Корзина пуста";
+      document.getElementById("cartTotal").textContent = `${total} манат`;
+      document.getElementById("checkoutBtn").disabled = count === 0;
+    }
+
+    function openCheckout() {
+      document.getElementById("modal").classList.add("open");
+    }
+
+    function closeCheckout() {
+      document.getElementById("modal").classList.remove("open");
+    }
+
+    function sendOrder() {
+      const name = document.getElementById("clientName").value.trim();
+      const phone = document.getElementById("clientPhone").value.trim();
+      const error = document.getElementById("error");
+
+      if (!name || !phone) {
+        error.style.display = "block";
+        return;
+      }
+
+      const order = {
+        type: "order",
+        name,
+        phone,
+        items: getItems(),
+        total: getTotal()
+      };
+
+      if (tg) {
+        tg.sendData(JSON.stringify(order));
+        tg.close();
+      } else {
+        alert("Заказ готов: " + JSON.stringify(order));
+      }
+    }
+
+    renderTabs();
+    renderGrid();
+  </script>
+</body>
+</html>
