@@ -1,12 +1,14 @@
-import os
+import json
 import logging
+import os
 
-from telegram import ReplyKeyboardMarkup, Update
+from telegram import KeyboardButton, ReplyKeyboardMarkup, Update, WebAppInfo
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OWNER_CHAT_ID = int(os.getenv("OWNER_CHAT_ID", "0"))
+MINI_APP_URL = os.getenv("MINI_APP_URL", "")
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is not set")
@@ -44,14 +46,21 @@ PRODUCTS = {
 }
 
 
-MAIN_KEYBOARD = ReplyKeyboardMarkup(
-    [
-        ["Каталог", "Акции"],
-        ["Оставить заявку", "Контакты"],
-        ["Задать вопрос"],
-    ],
-    resize_keyboard=True,
-)
+def main_keyboard() -> ReplyKeyboardMarkup:
+    catalog_button = (
+        KeyboardButton("Открыть каталог", web_app=WebAppInfo(url=MINI_APP_URL))
+        if MINI_APP_URL
+        else KeyboardButton("Каталог")
+    )
+    return ReplyKeyboardMarkup(
+        [
+            [catalog_button],
+            ["Каталог", "Акции"],
+            ["Оставить заявку", "Контакты"],
+            ["Задать вопрос"],
+        ],
+        resize_keyboard=True,
+    )
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -60,21 +69,74 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Свежие продукты для дома и бизнеса.\n"
         "Выберите нужный раздел:"
     )
-    await update.message.reply_text(text, reply_markup=MAIN_KEYBOARD)
+    await update.message.reply_text(text, reply_markup=main_keyboard())
+
+
+async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    raw_data = update.effective_message.web_app_data.data
+
+    try:
+        data = json.loads(raw_data)
+    except json.JSONDecodeError:
+        await update.effective_message.reply_text(
+            "Не получилось прочитать заказ. Попробуйте отправить ещё раз.",
+            reply_markup=main_keyboard(),
+        )
+        return
+
+    if data.get("type") != "order":
+        await update.effective_message.reply_text(
+            "Данные получены, но это не заказ.",
+            reply_markup=main_keyboard(),
+        )
+        return
+
+    items = data.get("items", [])
+    item_lines = []
+    for item in items:
+        name = item.get("name", "Товар")
+        qty = int(item.get("qty", 1))
+        price = int(item.get("price", 0))
+        item_lines.append(f"- {name} x{qty} = {qty * price} манат")
+
+    order_text = (
+        "Новый заказ из Mini App\n\n"
+        f"Клиент в Telegram: {user.full_name}\n"
+        f"Username: {format_username(user.username)}\n"
+        f"Имя: {data.get('name', '-')}\n"
+        f"Телефон: {data.get('phone', '-')}\n\n"
+        "Товары:\n"
+        + "\n".join(item_lines)
+        + f"\n\nИтого: {data.get('total', 0)} манат"
+    )
+
+    await send_owner_message(context, order_text)
+    await update.effective_message.reply_text(
+        "Спасибо! Заказ принят. Менеджер скоро свяжется с вами.",
+        reply_markup=main_keyboard(),
+    )
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user = update.effective_user
 
-    if text == "Каталог":
+    if text in ("Каталог", "Открыть каталог"):
+        if MINI_APP_URL:
+            await update.message.reply_text(
+                "Нажмите кнопку «Открыть каталог» в меню, чтобы открыть красивый каталог с корзиной.",
+                reply_markup=main_keyboard(),
+            )
+            return
+
         catalog = "Каталог продуктов:\n\n"
         for category, items in PRODUCTS.items():
             catalog += f"{category}\n"
             for item in items:
                 catalog += f"- {item}\n"
             catalog += "\n"
-        await update.message.reply_text(catalog, reply_markup=MAIN_KEYBOARD)
+        await update.message.reply_text(catalog, reply_markup=main_keyboard())
         return
 
     if text == "Акции":
@@ -83,7 +145,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "- Бесплатная доставка от 200 манат\n"
             "- Скидка 10% на первый заказ\n"
             "- Семейный овощной набор по специальной цене",
-            reply_markup=MAIN_KEYBOARD,
+            reply_markup=main_keyboard(),
         )
         return
 
@@ -93,7 +155,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Город: {BUSINESS['city']}\n"
             f"Время работы: {BUSINESS['work_time']}\n"
             f"Телефон: {BUSINESS['phone']}",
-            reply_markup=MAIN_KEYBOARD,
+            reply_markup=main_keyboard(),
         )
         return
 
@@ -117,7 +179,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(
             "Спасибо! Заявка принята. Менеджер скоро свяжется с вами.",
-            reply_markup=MAIN_KEYBOARD,
+            reply_markup=main_keyboard(),
         )
         return
 
@@ -137,13 +199,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(
             "Спасибо! Я передал вопрос менеджеру.",
-            reply_markup=MAIN_KEYBOARD,
+            reply_markup=main_keyboard(),
         )
         return
 
     await update.message.reply_text(
         "Выберите раздел в меню или нажмите «Оставить заявку».",
-        reply_markup=MAIN_KEYBOARD,
+        reply_markup=main_keyboard(),
     )
 
 
@@ -161,6 +223,7 @@ def format_username(username: str | None) -> str:
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run_polling(drop_pending_updates=True)
 

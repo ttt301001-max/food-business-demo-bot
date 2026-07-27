@@ -11,6 +11,7 @@
 - Принимает заявку от клиента
 - Отправляет заявку владельцу в Telegram
 - Принимает вопросы от клиентов
+- Открывает Mini App каталог с корзиной
 
 ## Файлы
 
@@ -18,6 +19,9 @@
 - `requirements.txt` - зависимости Python
 - `Procfile` - команда запуска для Railway
 - `.python-version` - версия Python для Railway
+- `mise.toml` - настройка установки Python на Railway
+- `docs/index.html` - Telegram Mini App каталог
+- `docs/.nojekyll` - настройка GitHub Pages для статического сайта
 
 ## Переменные Railway
 
@@ -26,6 +30,7 @@
 ```txt
 BOT_TOKEN=токен_бота_из_BotFather
 OWNER_CHAT_ID=ваш_telegram_id
+MINI_APP_URL=https://ваш-github-username.github.io/название-репозитория/
 ```
 
 ## Как запустить
@@ -36,7 +41,9 @@ OWNER_CHAT_ID=ваш_telegram_id
 4. Загрузите эти файлы в GitHub.
 5. В Railway выберите `Deploy from GitHub`.
 6. Добавьте переменные `BOT_TOKEN` и `OWNER_CHAT_ID`.
-7. Перезапустите проект.
+7. Включите GitHub Pages из папки `docs`.
+8. Добавьте в Railway переменную `MINI_APP_URL`.
+9. Перезапустите проект.
 
 ## Что менять под клиента
 
